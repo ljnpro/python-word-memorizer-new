@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}今日复习 - Word Memorizer{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">{{ today.strftime('%Y-%m-%d') }}</p>
+        <h1>今日复习</h1>
+        <p class="subtitle">根据间隔重复算法为你准备的学习队列。按键 <strong>J / Enter</strong> = 认识，<strong>F</strong> = 不认识。</p>
+    </div>
+    <div class="hero-stats">
+        <div class="stat-box">
+            <p class="label">今日任务</p>
+            <p class="value">{{ words|length }}</p>
+        </div>
+        <div class="stat-box">
+            <p class="label">已完成</p>
+            <p class="value" id="done-count">0</p>
+        </div>
+    </div>
+</section>
+
+<section class="card-area">
+    {% if words %}
+    <div class="card" id="card">
+        <div class="card-head">
+            <span class="badge" id="badge-status">待复习</span>
+            <span id="progress-text">1 / {{ words|length }}</span>
+        </div>
+        <h2 id="word-text">{{ words[0].word }}</h2>
+        <p class="phonetic" id="phonetic">{{ words[0].phonetic or '' }}</p>
+        <div class="meaning" id="meaning" data-hidden="true">
+            <label>释义</label>
+            <p>{{ words[0].meaning }}</p>
+        </div>
+        {% if words[0].example %}
+        <div class="example" id="example">
+            <label>例句</label>
+            <p>{{ words[0].example }}</p>
+        </div>
+        {% endif %}
+        <div class="actions">
+            <button class="ghost" id="toggle-meaning">显示释义</button>
+            <div class="action-group">
+                <button class="secondary" id="btn-forgot">不认识 (F)</button>
+                <button class="primary" id="btn-know">认识 (J / Enter)</button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty">
+        <h2>今日任务已完成</h2>
+        <p>添加一些单词或明天再来看看吧。</p>
+        <a class="primary" href="/words">前往单词列表</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const words = {{ words|tojson }};
+let index = 0;
+let done = 0;
+const card = document.getElementById('card');
+const wordText = document.getElementById('word-text');
+const phonetic = document.getElementById('phonetic');
+const meaning = document.getElementById('meaning');
+const example = document.getElementById('example');
+const progressText = document.getElementById('progress-text');
+const badge = document.getElementById('badge-status');
+const toggleBtn = document.getElementById('toggle-meaning');
+const btnKnow = document.getElementById('btn-know');
+const btnForgot = document.getElementById('btn-forgot');
+const doneCount = document.getElementById('done-count');
+
+function render(idx) {
+    const w = words[idx];
+    wordText.innerText = w.word;
+    phonetic.innerText = w.phonetic || '';
+    meaning.querySelector('p').innerText = w.meaning;
+    const exampleContainer = document.getElementById('example');
+    if (exampleContainer) {
+        if (w.example) {
+            exampleContainer.querySelector('p').innerText = w.example;
+            exampleContainer.style.display = 'block';
+        } else {
+            exampleContainer.style.display = 'none';
+        }
+    }
+    badge.innerText = w.familiarity_score <= 1 ? '新词/生词' : '复习';
+    hideMeaning();
+    progressText.innerText = `${idx + 1} / ${words.length}`;
+}
+
+function hideMeaning() {
+    meaning.dataset.hidden = 'true';
+    meaning.classList.add('blurred');
+    toggleBtn.innerText = '显示释义';
+}
+
+function showMeaning() {
+    meaning.dataset.hidden = 'false';
+    meaning.classList.remove('blurred');
+    toggleBtn.innerText = '隐藏释义';
+}
+
+if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+        if (meaning.dataset.hidden === 'true') { showMeaning(); } else { hideMeaning(); }
+    });
+}
+
+async function submitAnswer(known) {
+    const w = words[index];
+    const formData = new FormData();
+    formData.append('word_id', w.id);
+    formData.append('known', known);
+    const res = await fetch('/review/answer', { method: 'POST', body: formData });
+    if (!res.ok) { flashMessage('提交失败', 'error'); return; }
+    done += 1;
+    doneCount.innerText = done;
+    if (index < words.length - 1) {
+        index += 1;
+        render(index);
+    } else {
+        card.innerHTML = `<h2>今日复习完成</h2><p>太棒了！休息一下，再去浏览列表巩固一下吧。</p><a class="primary" href="/words">查看单词列表</a>`;
+    }
+}
+
+if (btnKnow) btnKnow.addEventListener('click', () => submitAnswer(true));
+if (btnForgot) btnForgot.addEventListener('click', () => submitAnswer(false));
+
+document.addEventListener('keydown', (e) => {
+    if (!words.length) return;
+    if (e.key.toLowerCase() === 'j' || e.key === 'Enter') { submitAnswer(true); }
+    if (e.key.toLowerCase() === 'f') { submitAnswer(false); }
+});
+
+if (words.length) { render(0); }
+</script>
+{% endblock %}

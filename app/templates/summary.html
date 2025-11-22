@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}今日复习完成{% endblock %}
+{% block content %}
+<div class="summary">
+    <h1>今日复习完成 🎉</h1>
+    <p>{{ today.strftime('%Y-%m-%d') }}</p>
+    <div class="summary-grid">
+        <div class="stat-box">
+            <p class="label">复习总数</p>
+            <p class="value">{{ total }}</p>
+        </div>
+        <div class="stat-box">
+            <p class="label">新词</p>
+            <p class="value">{{ new_count }}</p>
+        </div>
+    </div>
+    <a class="primary" href="/review/today">再来一轮</a>
+</div>
+{% endblock %}

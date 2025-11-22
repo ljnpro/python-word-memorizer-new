@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Word Memorizer{% endblock %}</title>
+    <link rel="stylesheet" href="/static/main.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">Word Memorizer</div>
+    <nav>
+        <a href="/review/today">今日复习</a>
+        <a href="/words">单词列表</a>
+    </nav>
+</header>
+<main class="container">
+    {% block content %}{% endblock %}
+</main>
+<footer class="footer">本地运行 · FastAPI + SQLite · 间隔重复</footer>
+<script>
+function flashMessage(text, variant="info") {
+    const bar = document.createElement('div');
+    bar.className = `flash ${variant}`;
+    bar.innerText = text;
+    document.body.appendChild(bar);
+    setTimeout(() => bar.classList.add('show')); // trigger transition
+    setTimeout(() => { bar.classList.remove('show'); bar.remove(); }, 3200);
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
