@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}单词列表{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <p class="eyebrow">管理与搜索</p>
+        <h1>单词列表</h1>
+        <p class="subtitle">支持按字母、创建时间、熟悉度排序，搜索词或释义。</p>
+    </div>
+    <div class="actions-inline">
+        <form id="export-form" action="/words/export" method="get">
+            <button class="ghost" type="submit">导出 CSV</button>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <form class="filters" method="get">
+        <input type="text" name="search" placeholder="搜索 word / meaning" value="{{ search }}" />
+        <select name="sort">
+            <option value="created_at" {% if sort=='created_at' %}selected{% endif %}>按创建时间</option>
+            <option value="alphabet" {% if sort=='alphabet' %}selected{% endif %}>按字母</option>
+            <option value="familiarity" {% if sort=='familiarity' %}selected{% endif %}>按熟悉度</option>
+        </select>
+        <button type="submit" class="primary">筛选</button>
+    </form>
+</section>
+
+<section class="grid">
+    <div class="panel">
+        <h3>新增单词</h3>
+        <form id="create-form">
+            <div class="field"><label>单词</label><input name="word" required></div>
+            <div class="field"><label>音标</label><input name="phonetic"></div>
+            <div class="field"><label>释义</label><textarea name="meaning" required rows="3"></textarea></div>
+            <div class="field"><label>例句</label><textarea name="example" rows="2"></textarea></div>
+            <div class="field"><label>标签</label><input name="tags" placeholder="逗号分隔"></div>
+            <button class="primary" type="submit">添加</button>
+        </form>
+    </div>
+    <div class="panel">
+        <h3>CSV 导入</h3>
+        <p class="subtitle">支持字段：word, meaning, phonetic, example, tags。</p>
+        <form id="import-form">
+            <input type="file" name="file" accept=".csv" required />
+            <button class="secondary" type="submit">上传导入</button>
+        </form>
+        <p class="caption">已存在的单词会被跳过。</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-head">
+        <h3>全部单词（{{ words|length }}）</h3>
+    </div>
+    <div class="table">
+        <div class="table-row head">
+            <span>单词</span><span>释义</span><span>熟悉度</span><span>下次复习</span><span>操作</span>
+        </div>
+        {% for w in words %}
+        <div class="table-row">
+            <span><strong>{{ w.word }}</strong><br><em class="muted">{{ w.phonetic }}</em></span>
+            <span>{{ w.meaning }}</span>
+            <span><span class="badge muted">{{ w.familiarity_score }}</span></span>
+            <span>{{ w.next_review_date or '未安排' }}</span>
+            <span class="actions-inline">
+                <button class="ghost" onclick="openEdit({{ w.id }}, '{{ w.meaning|replace("'", "\\'") }}', '{{ (w.example or '')|replace("'", "\\'") }}', '{{ (w.tags or '')|replace("'", "\\'") }}', '{{ (w.phonetic or '')|replace("'", "\\'") }}')">编辑</button>
+                <button class="ghost danger" onclick="deleteWord({{ w.id }})">删除</button>
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="modal" id="edit-modal">
+    <div class="modal-content">
+        <h3>编辑单词</h3>
+        <form id="edit-form">
+            <input type="hidden" name="word_id" />
+            <div class="field"><label>音标</label><input name="phonetic"></div>
+            <div class="field"><label>释义</label><textarea name="meaning" rows="3"></textarea></div>
+            <div class="field"><label>例句</label><textarea name="example" rows="2"></textarea></div>
+            <div class="field"><label>标签</label><input name="tags"></div>
+            <div class="actions-inline">
+                <button type="button" class="ghost" onclick="closeModal()">取消</button>
+                <button class="primary" type="submit">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const createForm = document.getElementById('create-form');
+const importForm = document.getElementById('import-form');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+
+if (createForm) {
+    createForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = new FormData(createForm);
+        const res = await fetch('/words', { method: 'POST', body: data });
+        if (res.ok) { flashMessage('添加成功', 'success'); window.location.reload(); } else { flashMessage('添加失败，可能已存在', 'error'); }
+    });
+}
+
+if (importForm) {
+    importForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = new FormData(importForm);
+        const res = await fetch('/words/import', { method: 'POST', body: data });
+        if (res.ok) {
+            const info = await res.json();
+            flashMessage(`导入完成：成功 ${info.imported} 条，跳过 ${info.skipped} 条`, 'success');
+            setTimeout(() => window.location.reload(), 400);
+        } else { flashMessage('导入失败', 'error'); }
+    });
+}
+
+function openEdit(id, meaning, example, tags, phonetic) {
+    editForm.word_id.value = id;
+    editForm.meaning.value = meaning;
+    editForm.example.value = example;
+    editForm.tags.value = tags;
+    editForm.phonetic.value = phonetic;
+    editModal.classList.add('show');
+}
+
+function closeModal() {
+    editModal.classList.remove('show');
+}
+
+editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = editForm.word_id.value;
+    const data = new FormData(editForm);
+    const res = await fetch(`/words/${id}`, { method: 'POST', body: data });
+    if (res.ok) { flashMessage('已更新', 'success'); closeModal(); setTimeout(() => window.location.reload(), 300); } else { flashMessage('更新失败', 'error'); }
+});
+
+async function deleteWord(id) {
+    if (!confirm('确认删除该单词？')) return;
+    const res = await fetch(`/words/${id}/delete`, { method: 'POST' });
+    if (res.ok) { flashMessage('已删除', 'success'); setTimeout(() => window.location.reload(), 200); } else { flashMessage('删除失败', 'error'); }
+}
+</script>
+{% endblock %}
