@@ -7,7 +7,7 @@
 - 今日复习：卡片式体验，显示进度、释义显示/隐藏、键盘操作。
 - 单词管理：新增、编辑、删除、搜索、按创建时间/字母/熟悉度排序。
 - CSV 导入/导出：支持字段 `word, meaning, phonetic, example, tags`，已存在的单词会被跳过并统计。
-- 本地存储：所有数据保存在仓库根目录的 `wordmemorizer.db`。
+- 本地存储：所有数据保存在系统用户目录（macOS 下为 `~/Library/Application Support/WordMemorizer/wordmemorizer.db`）。
 
 ## 快速开始（macOS / Linux / Windows）
 1. 创建并激活虚拟环境（示例为 macOS/Linux）：
@@ -30,6 +30,18 @@
    ```
 4. 浏览器访问 [http://localhost:8000](http://localhost:8000) 即可使用。
 
+### 一键桌面版（pywebview GUI）
+- 安装依赖后直接运行：
+  ```bash
+  python desktop_app.py
+  ```
+  这会在后台启动 FastAPI 服务并弹出原生窗口，用户无需打开浏览器。
+- 若要生成可在 macOS 上直接双击的 `.app`，在本机运行：
+  ```bash
+  ./scripts/build_mac_app.sh
+  ```
+  完成后会在 `dist/WordMemorizer.app` 生成可分发的应用包，可压缩后上传至 GitHub Releases，用户下载解压后即可双击使用（无需命令行）。
+
 ## 项目结构
 ```
 app/
@@ -45,8 +57,9 @@ app/
     import_export.py # CSV 导入导出逻辑
   templates/       # Jinja2 模板（复习页、列表页、完成页）
   static/          # 样式文件
+desktop_app.py      # 桌面版入口，启动 API 并打开原生窗口
 requirements.txt    # 项目依赖
-wordmemorizer.db    # 运行后生成的本地数据库文件
+scripts/           # 打包脚本（macOS PyInstaller 构建）
 ```
 
 ## 使用提示
