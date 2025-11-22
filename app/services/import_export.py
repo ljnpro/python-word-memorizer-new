@@ -1,4 +1,5 @@
 import csv
+from datetime import date
 from io import StringIO
 from typing import Tuple
 
@@ -30,6 +31,7 @@ async def import_csv(db: Session, file: UploadFile) -> Tuple[int, int]:
             phonetic=(row.get("phonetic") or "").strip() or None,
             example=(row.get("example") or "").strip() or None,
             tags=(row.get("tags") or "").strip() or None,
+            next_review_date=date.today(),
         )
         db.add(word)
         imported += 1

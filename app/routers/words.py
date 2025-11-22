@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
@@ -58,6 +59,7 @@ def create_word(
         phonetic=phonetic.strip() if phonetic else None,
         example=example.strip() if example else None,
         tags=tags.strip() if tags else None,
+        next_review_date=date.today(),
     )
     db.add(word_obj)
     db.commit()

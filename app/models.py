@@ -16,7 +16,7 @@ class Word(Base):
     familiarity_score = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_review_date = Column(Date, nullable=True)
-    next_review_date = Column(Date, nullable=True, index=True)
+    next_review_date = Column(Date, nullable=True, index=True, default=date.today)
 
     def is_new(self) -> bool:
         return self.familiarity_score == 0
